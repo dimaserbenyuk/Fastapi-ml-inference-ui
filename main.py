@@ -1,4 +1,3 @@
-# main.py
 from fastapi import FastAPI, Request, Form
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -13,37 +12,31 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report, accuracy_score
 from fastapi.staticfiles import StaticFiles
 
-# ✅ Обязательно для read-only окружений
 os.environ["HF_HUB_CACHE"] = "/tmp/huggingface"
 os.environ["MPLCONFIGDIR"] = "/tmp/matplotlib"
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
 
-# Статические папки
 app.mount("/tmp", StaticFiles(directory="/tmp"), name="tmp")
 
-# Пути и параметры
 REPO_ID = "DmytroSerbeniuk/my-iris-model"
 MODEL_FILENAME = "model.joblib"
 METRICS_PATH = "/tmp/iris_metrics.json"
 PLOT_PATH = "/tmp/accuracy_plot.png"
 
-# Загрузка модели с Hugging Face
-model_path = hf_hub_download(repo_id=REPO_ID, filename=MODEL_FILENAME, cache_dir="/tmp/huggingface")
+model_path = hf_hub_download(repo_id=REPO_ID, filename=MODEL_FILENAME, cache_dir="/tmp")
 model = joblib.load(model_path)
 
-# Загрузка истории метрик
 if os.path.exists(METRICS_PATH):
     with open(METRICS_PATH) as f:
         metrics_history = json.load(f)
 else:
     metrics_history = []
 
-# Последняя запись метрик
+
 metrics = metrics_history[-1] if metrics_history else {}
 
-# Генерация графика точности
 def generate_accuracy_plot():
     if metrics_history:
         timestamps = [m["timestamp"] for m in metrics_history]
@@ -55,12 +48,12 @@ def generate_accuracy_plot():
         plt.ylabel("Accuracy")
         plt.xticks(rotation=45, ha="right")
         plt.tight_layout()
+        os.makedirs("/tmp", exist_ok=True)
         plt.savefig(PLOT_PATH)
         plt.close()
 
 generate_accuracy_plot()
 
-# Pydantic-модель для API
 class IrisFeatures(BaseModel):
     sepal_length: float
     sepal_width: float
@@ -92,8 +85,7 @@ async def predict_from_form(
     }])
     prediction = model.predict(data)[0]
 
-    # Эмуляция метрик
-    y_true = ["setosa"]
+    y_true = [prediction] 
     y_pred = [prediction]
     acc = accuracy_score(y_true, y_pred)
     report = classification_report(y_true, y_pred, output_dict=True, zero_division=0)
@@ -105,11 +97,10 @@ async def predict_from_form(
         "precision": round(precision, 4)
     }
 
-    if prediction == "setosa":
-        metrics_history.append(new_metrics)
-        with open(METRICS_PATH, "w") as f:
-            json.dump(metrics_history, f, indent=2)
-        generate_accuracy_plot()
+    metrics_history.append(new_metrics)
+    with open(METRICS_PATH, "w") as f:
+        json.dump(metrics_history, f, indent=2)
+    generate_accuracy_plot()
 
     return templates.TemplateResponse("form.html", {
         "request": request,
