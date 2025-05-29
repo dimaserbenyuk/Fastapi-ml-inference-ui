@@ -19,13 +19,15 @@ os.environ["MPLCONFIGDIR"] = "/tmp/matplotlib"
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/tmp", StaticFiles(directory="/tmp"), name="tmp")
 
 # Пути и параметры
 REPO_ID = "DmytroSerbeniuk/my-iris-model"
 MODEL_FILENAME = "model.joblib"
 METRICS_PATH = "iris_metrics.json"
-PLOT_PATH = "static/accuracy_plot.png"
+PLOT_PATH = "/tmp/accuracy_plot.png"
+# PLOT_PATH = "static/accuracy_plot.png"
 
 # Загрузка модели с Hugging Face
 model_path = hf_hub_download(repo_id=REPO_ID, filename=MODEL_FILENAME, cache_dir="/tmp/huggingface")
