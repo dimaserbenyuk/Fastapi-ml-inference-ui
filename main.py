@@ -13,21 +13,21 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report, accuracy_score
 from fastapi.staticfiles import StaticFiles
 
-# ✅ Обязательно для продакшена в read-only средах (например, Hugging Face Spaces)
+# ✅ Обязательно для read-only окружений
 os.environ["HF_HUB_CACHE"] = "/tmp/huggingface"
 os.environ["MPLCONFIGDIR"] = "/tmp/matplotlib"
 
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
-# app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Статические папки
 app.mount("/tmp", StaticFiles(directory="/tmp"), name="tmp")
 
 # Пути и параметры
 REPO_ID = "DmytroSerbeniuk/my-iris-model"
 MODEL_FILENAME = "model.joblib"
-METRICS_PATH = "iris_metrics.json"
+METRICS_PATH = "/tmp/iris_metrics.json"
 PLOT_PATH = "/tmp/accuracy_plot.png"
-# PLOT_PATH = "static/accuracy_plot.png"
 
 # Загрузка модели с Hugging Face
 model_path = hf_hub_download(repo_id=REPO_ID, filename=MODEL_FILENAME, cache_dir="/tmp/huggingface")
@@ -55,7 +55,6 @@ def generate_accuracy_plot():
         plt.ylabel("Accuracy")
         plt.xticks(rotation=45, ha="right")
         plt.tight_layout()
-        os.makedirs("static", exist_ok=True)
         plt.savefig(PLOT_PATH)
         plt.close()
 
@@ -74,7 +73,7 @@ def form_page(request: Request):
         "request": request,
         "metrics": metrics,
         "metrics_history": metrics_history,
-        "plot_path": PLOT_PATH if os.path.exists(PLOT_PATH) else None
+        "plot_path": "/tmp/accuracy_plot.png" if os.path.exists(PLOT_PATH) else None
     })
 
 @app.post("/predict-form", response_class=HTMLResponse)
@@ -93,7 +92,7 @@ async def predict_from_form(
     }])
     prediction = model.predict(data)[0]
 
-    # Эмуляция метрик (для демонстрации)
+    # Эмуляция метрик
     y_true = ["setosa"]
     y_pred = [prediction]
     acc = accuracy_score(y_true, y_pred)
@@ -106,7 +105,6 @@ async def predict_from_form(
         "precision": round(precision, 4)
     }
 
-    # Условие добавления метрик (опционально)
     if prediction == "setosa":
         metrics_history.append(new_metrics)
         with open(METRICS_PATH, "w") as f:
@@ -118,7 +116,7 @@ async def predict_from_form(
         "prediction": prediction,
         "metrics": new_metrics,
         "metrics_history": metrics_history,
-        "plot_path": PLOT_PATH if os.path.exists(PLOT_PATH) else None
+        "plot_path": "/tmp/accuracy_plot.png" if os.path.exists(PLOT_PATH) else None
     })
 
 @app.post("/predict")
