@@ -13,9 +13,12 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report, accuracy_score
 from fastapi.staticfiles import StaticFiles
 
+# ✅ Обязательно для продакшена в read-only средах (например, Hugging Face Spaces)
+os.environ["HF_HUB_CACHE"] = "/tmp/huggingface"
+os.environ["MPLCONFIGDIR"] = "/tmp/matplotlib"
+
 app = FastAPI()
 templates = Jinja2Templates(directory="templates")
-
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Пути и параметры
@@ -25,7 +28,7 @@ METRICS_PATH = "iris_metrics.json"
 PLOT_PATH = "static/accuracy_plot.png"
 
 # Загрузка модели с Hugging Face
-model_path = hf_hub_download(repo_id=REPO_ID, filename=MODEL_FILENAME)
+model_path = hf_hub_download(repo_id=REPO_ID, filename=MODEL_FILENAME, cache_dir="/tmp/huggingface")
 model = joblib.load(model_path)
 
 # Загрузка истории метрик
@@ -89,7 +92,7 @@ async def predict_from_form(
     prediction = model.predict(data)[0]
 
     # Эмуляция метрик (для демонстрации)
-    y_true = ["setosa"]  # или можно заменить на реальные данные
+    y_true = ["setosa"]
     y_pred = [prediction]
     acc = accuracy_score(y_true, y_pred)
     report = classification_report(y_true, y_pred, output_dict=True, zero_division=0)
